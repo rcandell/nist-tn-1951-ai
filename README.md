@@ -39,6 +39,4 @@ For inquiries, visit [NIST Industrial Wireless Systems](https://www.nist.gov/pro
 
 The license for this project will be specified upon release. Please check back for updates.
 
-## Footer
 
-© 2025 GitHub, Inc.
