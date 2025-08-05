@@ -1,8 +1,6 @@
-function doallMobile()
-% NIST-TN-1951-AI: doallMobile.m
-% Description: Main script for processing and analyzing NIST 1951 industrial wireless propagation measurements
-%              using AI-driven techniques. This script orchestrates the analysis pipeline, integrating
-%              data preprocessing, AI model application, and result generation for industrial wireless scenarios.
+function doallMobileRedFFT()
+% NIST-TN-1951-AI: doallMobileRedFFT.m
+% Description: Main script for extracting the fft information of the cirs.
 % Author: Rick Candell, NIST
 % Contact: For inquiries, visit https://www.nist.gov/programs-projects/wireless-systems-industrial-environments
 % Dependencies: Requires code from https://github.com/rcandell/IndustrialWirelessAnalysis
@@ -113,9 +111,9 @@ function analyze_cwd(OPTS, manifest_path, TEST_DATA)
     pattern = '*.mat';
     C = MeasurementRun(OPTS, manifest_tbl);
     if TESTING
-        C.estimate_channel_cwd(pattern, TEST_DATA);
+        C.make_ffts_cwd(pattern, TEST_DATA);
     else
-        C.estimate_channel_cwd(pattern);
+        C.make_ffts_cwd(pattern);
     end
     
     set(0, 'DefaultFigureVisible', 'on')
