@@ -53,9 +53,10 @@ import seaborn as sns
 import joblib
 
 # paremters
-TRAIN_MODELS = True  # Set to True to train models, False to load existing models
+TRAIN_MODELS = False  # Set to True to train models, False to load existing models
 SCALE_REG_IN = True  # Set to True if you want to scale regression targets
 
+# validate parameters
 TRAIN_MODELS = True  if SCALE_REG_IN else TRAIN_MODELS  # If scaling is enabled, always train models    
 
 # Define target columns
@@ -89,16 +90,17 @@ for col in clf_target_cols:
 scaler = StandardScaler() if SCALE_REG_IN else None
 
 # Initialize models
+myseed = np.random.randint(65536)
 classifiers = {
     'LOS': MLPClassifier(hidden_layer_sizes=(1000, 50), activation='relu', solver='adam', 
-                         max_iter=1, random_state=42, warm_start=True, early_stopping=False),
+                         max_iter=1, random_state=myseed, warm_start=True, early_stopping=False),
     'Obstructed': MLPClassifier(hidden_layer_sizes=(100, 50), activation='relu', solver='adam', 
-                               max_iter=1, random_state=42, warm_start=True, early_stopping=False),
+                               max_iter=1, random_state=myseed, warm_start=True, early_stopping=False),
     'Waveguided': MLPClassifier(hidden_layer_sizes=(100, 50), activation='relu', solver='adam', 
-                               max_iter=1, random_state=42, warm_start=True, early_stopping=False)
+                               max_iter=1, random_state=myseed, warm_start=True, early_stopping=False)
 }
 reg = MLPRegressor(hidden_layer_sizes=(1000, 500), activation='relu', solver='adam', 
-                   max_iter=1, random_state=42, warm_start=True, early_stopping=False)
+                   max_iter=1, random_state=myseed, warm_start=True, early_stopping=False)
 multi_reg = MultiOutputRegressor(reg)
 
 # Load or train models
@@ -119,9 +121,11 @@ match  TRAIN_MODELS:
 
         for i, chunk in enumerate(chunks):
             
+            # drop any rows with -inf for path gain      
             # convert PathGain to log10 domain
             pgx = 10*np.log10(chunk['PathGain'])
-            pgx = pgx.replace([-np.inf], -174)
+            pgx = pgx.replace([-np.inf], min(pgx[pgx!=-np.inf]))
+            #pgx = pgx[~pgx['PathGain'].isin([-np.inf])]
             chunk['PathGain'] = pgx.copy()
             
             # Preprocess classification targets
@@ -187,11 +191,20 @@ match  TRAIN_MODELS:
         multi_reg = joblib.load('mlp_regressor_multi.pkl')
         scaler = joblib.load('scaler.pkl') if SCALE_REG_IN else None
             
+
 # Evaluate on a test chunk
 test_df = pd.read_csv(test_file, usecols=columns, dtype=dtypes)
-# convert PathGain to log10 domain
+
+''' # convert PathGain to log10 domain
 pgx = 10*np.log10(test_df['PathGain'])
 pgx = pgx.replace([-np.inf], -174)
+test_df['PathGain'] = pgx.copy() '''
+
+# drop any rows with -inf for path gain      
+# convert PathGain to log10 domain
+pgx = 10*np.log10(test_df['PathGain'])
+pgx = pgx.replace([-np.inf], min(pgx[pgx!=-np.inf]))
+#pgx = pgx[~pgx['PathGain'].isin([-np.inf])]
 test_df['PathGain'] = pgx.copy()
 
 for col in clf_target_cols:
@@ -247,7 +260,7 @@ for col, clf in classifiers.items():
 # Visualize permutation importance for classification targets
 '''
 for col, clf in classifiers.items():
-    perm_importance = permutation_importance(clf, X_test, y_test_clf[col], n_repeats=5, random_state=42)
+    perm_importance = permutation_importance(clf, X_test, y_test_clf[col], n_repeats=5, random_state=myseed)
     importances = pd.DataFrame({'Feature': fft_cols, 'Importance': perm_importance.importances_mean})
     plt.figure(figsize=(10, 12))
     sns.barplot(x='Importance', y='Feature', data=importances.sort_values('Importance', ascending=False))
